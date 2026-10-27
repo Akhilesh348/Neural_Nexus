@@ -71,7 +71,7 @@ class Rules:
         self.ext, self.rare, self.narrow = com["external"], com["rare_pair"], com["narrow"]
         tim = cfg["timing"]
         self.t_cap = tim["cap"]
-        self.weekend, self.hour_rule = tim["weekend"], tim["hour_rule"]
+        self.weekend, self.off_hours = tim["weekend"], tim["off_hours"]
         self.bands = cfg["priority_bands"]
 
     @classmethod
@@ -135,17 +135,24 @@ def language_hits(text, rules):
     return hits
 
 
+def off_hours_share(hour, counts, window):
+    """Share of a sender's emails sent within +/-window hours of `hour` (circular 24 h)."""
+    total = sum(counts)
+    near = sum(counts[(hour + d) % 24] for d in range(-window, window + 1))
+    return near / total, total
+
+
 def score_email(subject, body_authored, sender, recipients, weekday, rules,
-                pair_counts=None, sender_counts=None, sent_date=None):
+                pair_counts=None, sender_counts=None, sent_date=None, hour=None, sender_hours=None):
     """Score one email.
 
     weekday: 0=Mon..6=Sun, or None when the date is invalid (timing not evaluated).
     sent_date: 'YYYY-MM-DD' or None (kept for callers; no date-window rule is applied).
+    hour: header hour 0-23 (UTC); sender_hours: {sender: [24 counts]} over the corpus.
     pair_counts: {(sender, recipient): n}; sender_counts: {sender: n} over the corpus.
     """
     text = f"{subject or ''}\n{body_authored or ''}"
     res = ScoreResult(flagged=False)
-    res.not_evaluated.append(Reason(rules.hour_rule["id"], 0, rules.hour_rule["explanation"]))
 
     hits = language_hits(text, rules)
     if not hits:
@@ -206,6 +213,20 @@ def score_email(subject, body_authored, sender, recipients, weekday, rules,
         t += rules.weekend["points"]
         res.reasons.append(Reason(rules.weekend["id"], rules.weekend["points"], rules.weekend["explanation"],
                                   ["Sat", "Sun"][weekday - 5]))
+    oh = rules.off_hours
+    counts = (sender_hours or {}).get(sender)
+    if hour is None or sender_hours is None:
+        res.not_evaluated.append(Reason(oh["id"], 0, "Not evaluated: no valid date"))
+    elif not counts or sum(counts) < oh["min_sender_emails"]:
+        res.not_evaluated.append(Reason(oh["id"], 0, f"Not evaluated: sender has fewer than "
+                                                     f"{oh['min_sender_emails']} dated emails"))
+    else:
+        share, total = off_hours_share(hour, counts, oh["window_hours"])
+        if share <= oh["max_share"]:
+            t += oh["points"]
+            res.reasons.append(Reason(oh["id"], oh["points"], oh["explanation"],
+                                      f"header hour {hour:02d} UTC: only {share:.1%} of this sender's "
+                                      f"{total} emails fall within +/-{oh['window_hours']} h"))
     res.t = min(t, rules.t_cap)
 
     res.score = float(min(100, res.k + res.c + res.t))

@@ -22,14 +22,14 @@
 
 **Why no LLM?** Optional per the brief; adds cost, latency, non-determinism and a prompt-injection surface (email bodies are untrusted text).
 
-**How is the score calculated?** `min(100, K + C + T)`, only when a language rule fired. K: each rule counts its strongest phrase — strong 40 (destroy records, off the books, avoid a written record), medium 25 (keep this quiet, between you and me, off the record), weak 15 (don't forward this, delete this email) — cap 60, plus 10 for a finance-risk topic (LJM, SEC, Andersen, mark-to-market…). C: +10 external recipient, +10 rare pair, +10 sent to 1–3 people (cap 30). T: +5 weekend (cap 5). Low < 35 ≤ medium < 60 ≤ high.
+**How is the score calculated?** `min(100, K + C + T)`, only when a language rule fired. K: each rule counts its strongest phrase — strong 40 (destroy records, off the books, avoid a written record), medium 25 (keep this quiet, between you and me, off the record), weak 15 (don't forward this, delete this email) — cap 60, plus 10 for a finance-risk topic (LJM, SEC, Andersen, mark-to-market…). C: +10 external recipient, +10 rare pair, +10 sent to 1–3 people (cap 30). T: +5 weekend, +5 sent at an hour this sender rarely uses (cap 10). Low < 35 ≤ medium < 60 ≤ high.
 
 **Why only 114 of 254k emails?** Measured funnel: 1,008 emails contain any of our phrases at all; 704 of those are disclaimers, IT notices, negations or idioms; 190 are press articles or bulk senders → 114 flagged. Real misconduct language is rare, and the job is triage — "here are the conversations to read first". We tested more phrases on the corpus and added only those that were mostly genuine ("keep this confidential", "don't discuss this with anyone", "prefer not to put this in writing").
 
 **Why no date-window bonus?** We tried +10 for the investigation period (Oct 2001–Jan 2002) and removed it: it rewards *when* an email was sent rather than what it says, and would bias the ranking towards one period.
 
 **Why phrase strengths?** In v1.1 every phrase was worth 30, so 72 of 110 flags tied and "please don't forward this" ranked equal to "take this risk off the books". Strengths reflect how specific the request is; they gave 11 distinct score levels instead of 5.
-**Why no off-hours rule?** We measured: 28% of emails fall in 22:00–05:59 by header time, and header times run ~3 h from the in-body local timestamps. The rule would be noise, so it is shown as "not evaluated".
+**How do you handle off-hours when header times are shifted?** A fixed window (22:00–06:00) would be noise: 28% of emails fall there by header time, and headers run ~3 h from the in-body local timestamps. So we compare each email with **the sender's own hourly pattern**: +5 if 5% or less of that sender's emails were sent within ±1 h of this hour (needs ≥ 50 dated emails, else "not evaluated"). A constant shift moves all of a sender's emails equally, so it cancels out — a unit test checks this. On the corpus it fires on 6 of 114 flagged emails, e.g. a sender with 5,518 emails who sends only 1.1% at that hour.
 
 **How did you deduplicate?** Message-ID is unique per file in this corpus, so we hash sender + Date + subject + body. 517,401 files → ~254k unique emails; every original path is kept in `source_occurrences`.
 

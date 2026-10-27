@@ -103,6 +103,48 @@ def test_all_amplifiers_and_caps(rules):
     assert r.score == 95 and r.priority == "high"
 
 
+def _profile(peak, n=200):
+    """A sender who sends n emails, all within +/-2 h of `peak` (UTC)."""
+    counts = [0] * 24
+    for i in range(n):
+        counts[(peak + (i % 5) - 2) % 24] += 1
+    return {"a@enron.com": counts}
+
+
+def off(r):
+    return "T-OFF-HOURS" in {x.rule_id for x in r.reasons}
+
+
+def test_off_hours_fires_at_rare_hour_for_sender(rules):
+    r = score_email("", "Shred the files.", "a@enron.com", INTERNAL_MANY, 2, rules,
+                    hour=3, sender_hours=_profile(15))
+    assert off(r) and r.t == 5
+    hit = [x for x in r.reasons if x.rule_id == "T-OFF-HOURS"][0]
+    assert "0.0%" in hit.supporting_value and "200 emails" in hit.supporting_value
+
+
+def test_off_hours_not_at_usual_hour(rules):
+    r = score_email("", "Shred the files.", "a@enron.com", INTERNAL_MANY, 2, rules,
+                    hour=15, sender_hours=_profile(15))
+    assert not off(r)
+
+
+def test_off_hours_is_shift_invariant(rules):
+    # the whole corpus shifted by 3 h gives the same answer
+    a = score_email("", "Shred the files.", "a@enron.com", INTERNAL_MANY, 2, rules,
+                    hour=3, sender_hours=_profile(15))
+    b = score_email("", "Shred the files.", "a@enron.com", INTERNAL_MANY, 2, rules,
+                    hour=6, sender_hours=_profile(18))
+    assert off(a) and off(b)
+
+
+def test_off_hours_not_evaluated_for_low_volume_sender(rules):
+    r = score_email("", "Shred the files.", "a@enron.com", INTERNAL_MANY, 2, rules,
+                    hour=3, sender_hours=_profile(15, n=20))
+    assert not off(r)
+    assert "T-OFF-HOURS" in {x.rule_id for x in r.not_evaluated}
+
+
 def test_no_date_window_bonus(rules):
     a = s(rules, "Shred the files.", date="2001-11-05")
     b = s(rules, "Shred the files.", date="2000-11-06")

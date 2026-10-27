@@ -110,13 +110,18 @@ def score_all(con, rules):
     pair_counts = rec.groupby(["sender", "recipient"]).size().to_dict()
     sender_counts = emails["sender"].value_counts().to_dict()
     recips_by_email = rec.groupby("email_id")["recipient"].apply(list).to_dict()
+    # Per-sender hourly profile (UTC header hour). A constant corpus-wide shift moves every
+    # email of a sender equally, so "hours this sender rarely uses" stays meaningful.
+    emails["hour"] = emails["sent_at_utc"].str.slice(11, 13).astype(int)
+    hour_tab = emails.groupby(["sender", "hour"]).size().unstack(fill_value=0).reindex(columns=range(24), fill_value=0)
+    sender_hours = {s: row.tolist() for s, row in hour_tab.iterrows()}
 
     rows = []
     suppressed = 0
     for e in emails.itertuples(index=False):
         wd = None if pd.isna(e.weekday) else int(e.weekday)
         res = score_email(e.subject, e.body_authored, e.sender, recips_by_email.get(e.email_id, []),
-                          wd, rules, pair_counts, sender_counts, e.sent_at_utc)
+                          wd, rules, pair_counts, sender_counts, e.sent_at_utc, e.hour, sender_hours)
         suppressed += res.suppressed
         if res.flagged:
             rows.append((e.email_id, res.score, res.priority, res.k, res.c, res.t,

@@ -1,5 +1,5 @@
 {
-  "rule_version": "1.3.0",
+  "rule_version": "1.4.0",
   "notes": "Weights are engineering choices, not evidence-backed laws. An email is flagged for review only if at least one language rule fires on the sender's own (authored) text or subject. Each phrase has a strength (strong 40 / medium 25 / weak 15); each rule contributes its strongest hit. Communication, topic and timing signals only add points to already-flagged emails.",
 
   "language": {
@@ -131,16 +131,19 @@
   },
 
   "timing": {
-    "cap": 5,
+    "cap": 10,
     "weekend": {
       "id": "T-WEEKEND",
       "points": 5,
       "explanation": "Sent on a Saturday or Sunday (by header date, US/Pacific)"
     },
-    "hour_rule": {
+    "off_hours": {
       "id": "T-OFF-HOURS",
-      "status": "not_evaluated",
-      "explanation": "Not evaluated: header hours are not the sender's local time (all headers are -0700/-0800 and run ~3 h from in-body Lotus timestamps; 28% of emails fall in 22:00-05:59)"
+      "points": 5,
+      "min_sender_emails": 50,
+      "window_hours": 1,
+      "max_share": 0.05,
+      "explanation": "Sent at an hour this sender rarely uses (5% or less of their emails within +/-1 h). Measured against the sender's own hourly pattern, so the corpus-wide header-time shift does not matter"
     }
   },
 

@@ -69,7 +69,7 @@ tests/            parser, scoring, evaluation, end-to-end pipeline smoke test
 ## Failed attempts (summary — details in docs/FAILED_ATTEMPTS.md)
 
 - Message-ID dedup and raw-text-hash dedup: both find no duplicates in this corpus → content hash.
-- Off-hours rule: 28% of email falls in 22:00–05:59 by header and header times are shifted → not evaluated.
+- Fixed off-hours window: 28% of email falls in 22:00–05:59 by header and header times are shifted → replaced (v1.4.0) by a sender-relative rule: +5 when the sender rarely emails at that hour (≤ 5% of their emails within ±1 h).
 - Context-only scoring (external/rare/time): flagged 12.5% of all emails with no suspicious language → language now required.
 - First rule set on a 20k sample: disclaimers, news usage of "shred", negations → filters added (24 → 8 sample flags).
 - Rules v1.0.0 on the full corpus ranked press digests and a survey invitation at the top → v1.1.0 press/newsletter suppression and survey/negation fixes (360 → 110 flags; 185 suppressed, shown as "not evaluated").
@@ -77,7 +77,7 @@ tests/            parser, scoring, evaluation, end-to-end pipeline smoke test
 
 - v1.2.0 investigation-period bonus (+10 for Oct 2001–Jan 2002) removed by team decision (scored *when*, not *what*). Recall check: 16 candidate phrases tested on the corpus; only mostly-genuine ones added in v1.3.0 (87 → 114 flags).
 
-## Current results (full corpus, rules v1.3.0)
+## Current results (full corpus, rules v1.4.0)
 
 517,401 files · 0 parse failures · 254,361 unique emails (263,040 duplicate copies) · 253,879 dated 1998–2002 ·
 1,008 emails contain any rule phrase → 304 after disclaimer/IT/negation filters → **114 flagged for review**
