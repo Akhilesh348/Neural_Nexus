@@ -15,5 +15,3 @@
 **7. Prior work.** CMU Enron corpus documentation; the Powers Report (2002) for entity names used as context; the team's implementation spec.
 
 **8. Failed attempts.** Message-ID and raw-hash dedup (found no duplicates); fixed off-hours window (noise) → replaced by a sender-relative off-hours rule; context-only scoring (12.5% flagged); rules v1.0.0 ranked press digests and a survey invite at the top → v1.1.0 filters; v1.1.0 tied 72 of 110 flags at one score → v1.2.0 phrase strengths; treating "off-balance-sheet" as a strong phrase flooded the top → made context-only; an investigation-period date bonus was removed as biased. Details: `docs/FAILED_ATTEMPTS.md`.
-
-**Precision:** pending manual review of `docs/ANNOTATION_TEMPLATE.csv` (top 20 + 20 random, seed 42).
