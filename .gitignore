@@ -1,0 +1,19 @@
+# Raw corpus (443 MB) - never commit; see README source register
+*.tar.gz
+maildir/
+
+# Generated data (rebuild with: python -m src.pipeline)
+data/*.parquet
+data/sample/
+outputs/*.db
+outputs/*.db-*
+outputs/sample*
+
+# Problem statement (organizer document)
+*.docx
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
