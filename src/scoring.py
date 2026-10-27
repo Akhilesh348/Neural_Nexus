@@ -71,7 +71,7 @@ class Rules:
         self.ext, self.rare, self.narrow = com["external"], com["rare_pair"], com["narrow"]
         tim = cfg["timing"]
         self.t_cap = tim["cap"]
-        self.weekend, self.window_rule, self.hour_rule = tim["weekend"], tim["investigation_window"], tim["hour_rule"]
+        self.weekend, self.hour_rule = tim["weekend"], tim["hour_rule"]
         self.bands = cfg["priority_bands"]
 
     @classmethod
@@ -140,7 +140,7 @@ def score_email(subject, body_authored, sender, recipients, weekday, rules,
     """Score one email.
 
     weekday: 0=Mon..6=Sun, or None when the date is invalid (timing not evaluated).
-    sent_date: 'YYYY-MM-DD' or None.
+    sent_date: 'YYYY-MM-DD' or None (kept for callers; no date-window rule is applied).
     pair_counts: {(sender, recipient): n}; sender_counts: {sender: n} over the corpus.
     """
     text = f"{subject or ''}\n{body_authored or ''}"
@@ -200,18 +200,12 @@ def score_email(subject, body_authored, sender, recipients, weekday, rules,
 
     # T: timing
     t = 0
-    if weekday is None or not sent_date:
+    if weekday is None:
         res.not_evaluated.append(Reason(rules.weekend["id"], 0, "Not evaluated: no valid date"))
-        res.not_evaluated.append(Reason(rules.window_rule["id"], 0, "Not evaluated: no valid date"))
-    else:
-        if weekday >= 5:
-            t += rules.weekend["points"]
-            res.reasons.append(Reason(rules.weekend["id"], rules.weekend["points"], rules.weekend["explanation"],
-                                      ["Sat", "Sun"][weekday - 5]))
-        if rules.window_rule["start"] <= sent_date[:10] <= rules.window_rule["end"]:
-            t += rules.window_rule["points"]
-            res.reasons.append(Reason(rules.window_rule["id"], rules.window_rule["points"],
-                                      rules.window_rule["explanation"], sent_date[:10]))
+    elif weekday >= 5:
+        t += rules.weekend["points"]
+        res.reasons.append(Reason(rules.weekend["id"], rules.weekend["points"], rules.weekend["explanation"],
+                                  ["Sat", "Sun"][weekday - 5]))
     res.t = min(t, rules.t_cap)
 
     res.score = float(min(100, res.k + res.c + res.t))

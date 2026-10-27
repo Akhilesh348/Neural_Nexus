@@ -48,14 +48,14 @@ src/evaluate.py   annotation sheet (top 20 + 20 seeded random) → human labels 
 
 ## Scoring (`src/scoring.py`, `config/rules.json`)
 
-`score = min(100, K + C + T)` — computed **only when a language rule fires** (K required). Rules v1.2.0.
+`score = min(100, K + C + T)` — computed **only when a language rule fires** (K required). Rules v1.3.0.
 
 | Signal | Rules | Points |
 |---|---|---|
-| K language (0–60) — flags the email | K-DESTROY (strong 40: shred/destroy/purge/get rid of records · weak 15: "delete this email"), K-OFF-BOOKS (strong 40), K-NO-RECORD (strong 40), K-SECRECY (medium 25: "keep this quiet", "between you and me", "off the record" · weak 15: "don't forward this", "eyes only"). Each rule counts its strongest phrase. | 15 / 25 / 40 per rule, cap 60 |
-| K-TOPIC — adds only | finance-risk/investigation terms: LJM, Raptor, Chewco, JEDI, SPE, mark-to-market, prepay, Andersen, SEC, subpoena, restatement, off-balance-sheet | +10 |
+| K language (0–60) — flags the email | K-DESTROY (strong 40: shred/destroy/purge/get rid of records · weak 15: "delete this email"), K-OFF-BOOKS (strong 40), K-NO-RECORD (strong 40), K-SECRECY (medium 25: "keep this quiet / confidential", "between you and me", "off the record", "don't discuss this with anyone" · weak 15: "don't forward this", "eyes only"); K-NO-RECORD also covers "prefer not to put this in writing" (strong) and "rather discuss in person" (weak). Each rule counts its strongest phrase. | 15 / 25 / 40 per rule, cap 60 |
+| K-TOPIC — adds only | finance-risk/investigation terms: LJM, Raptor, Chewco, JEDI, SPE, mark-to-market, prepay, Andersen, SEC, subpoena, restatement, off-balance-sheet, document retention/destruction, shredding, cover-up, cooking the books | +10 |
 | C communication (0–30) — adds only | C-EXTERNAL (+10), C-RARE-PAIR (+10), C-NARROW 1–3 recipients (+10) | cap 30 |
-| T timing (0–15) — adds only | T-WEEKEND (+5), T-INVESTIGATION 16 Oct 2001–31 Jan 2002 (+10); T-OFF-HOURS **not evaluated** | cap 15 |
+| T timing (0–5) — adds only | T-WEEKEND (+5); T-OFF-HOURS **not evaluated**. No date-window bonus (team decision). | cap 5 |
 
 Priority: low < 35 ≤ medium < 60 ≤ high (a lone weak phrase is honestly "low").
 

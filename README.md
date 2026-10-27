@@ -75,12 +75,15 @@ tests/            parser, scoring, evaluation, end-to-end pipeline smoke test
 - Rules v1.0.0 on the full corpus ranked press digests and a survey invitation at the top → v1.1.0 press/newsletter suppression and survey/negation fixes (360 → 110 flags; 185 suppressed, shown as "not evaluated").
 - Rules v1.1.0 gave every phrase 30 points → only 5 distinct scores, spam and IT notices still flagged → v1.2.0 phrase strengths (strong 40 / medium 25 / weak 15), narrow-audience and investigation-period amplifiers, bulk-sender suppression. A v1.2 draft treating "off-balance-sheet" as a strong phrase flooded the top with routine finance memos; it was moved to context-only.
 
-## Current results (full corpus, rules v1.2.0)
+- v1.2.0 investigation-period bonus (+10 for Oct 2001–Jan 2002) removed by team decision (scored *when*, not *what*). Recall check: 16 candidate phrases tested on the corpus; only mostly-genuine ones added in v1.3.0 (87 → 114 flags).
+
+## Current results (full corpus, rules v1.3.0)
 
 517,401 files · 0 parse failures · 254,361 unique emails (263,040 duplicate copies) · 253,879 dated 1998–2002 ·
-**87 flagged for review** (11 high, 52 medium, 24 low; 11 distinct score levels) · 189 language hits set aside as
-press/newsletter/bulk-sender text ("not evaluated") · 360,243 sender→recipient pairs · 64 people with flagged emails ·
-pipeline 425 s, rescore ~2 min. **Precision: pending manual review.**
+1,008 emails contain any rule phrase → 304 after disclaimer/IT/negation filters → **114 flagged for review**
+(5 high, 71 medium, 38 low) · 190 hits set aside as press/newsletter/bulk-sender text ("not evaluated") ·
+360,243 sender→recipient pairs · 76 people with flagged emails · pipeline 425 s, rescore ~3 min.
+**Precision: pending manual review.** Two-slide summary: `docs/Enron_Insight_2_slides.pptx`.
 
 ## Limitations
 

@@ -90,7 +90,7 @@ def render_evidence(email_id):
         m1, m2, m3, _ = st.columns([1, 1, 1, 2])
         m1.metric("K language", f"{r.k_points:.0f} / 60")
         m2.metric("C communication", f"{r.c_points:.0f} / 30")
-        m3.metric("T timing", f"{r.t_points:.0f} / 15")
+        m3.metric("T timing", f"{r.t_points:.0f} / 5")
         st.markdown("**Why it was flagged**")
         for reason in json.loads(r.reasons_json):
             line = f"- **{reason['rule_id']}** (+{reason['points']:.0f}) — {html.escape(reason['explanation'])}"
@@ -170,8 +170,7 @@ with tab_flag:
     st.subheader("Which emails should a reviewer read first, and why?")
     rules_cfg = load_rules()
     rule_ids = [r["id"] for r in rules_cfg["language"]["strong_rules"]] + \
-               [rules_cfg["language"]["topic_rule"]["id"], "C-EXTERNAL", "C-RARE-PAIR", "C-NARROW",
-                "T-WEEKEND", "T-INVESTIGATION"]
+               [rules_cfg["language"]["topic_rule"]["id"], "C-EXTERNAL", "C-RARE-PAIR", "C-NARROW", "T-WEEKEND"]
     f0, _ = st.columns([1, 3])
     pick_priority = f0.multiselect("Priority", ["high", "medium", "low"], default=["high", "medium", "low"])
     f1, f2, f3, f4 = st.columns([1, 1.3, 1.3, 1.4])
@@ -297,7 +296,7 @@ with tab_method:
         "senders are set aside as 'not evaluated'). Each phrase has a strength — **strong 40, medium 25, "
         "weak 15** — and each rule counts its strongest phrase. Topic, communication and timing signals only "
         "**add** points to an already-flagged email — being unusual alone never flags anyone.\n\n"
-        "`score = min(100, K + C + T)` · K language 0–60 · C communication 0–30 · T timing 0–15 · "
+        "`score = min(100, K + C + T)` · K language 0–60 · C communication 0–30 · T timing 0–5 · "
         f"low < {cfg['priority_bands']['medium']} ≤ medium < {cfg['priority_bands']['high']} ≤ high · "
         f"rules v{cfg['rule_version']}")
     rows = []
@@ -311,7 +310,7 @@ with tab_method:
     rows += [(com[k]["id"], "C communication (adds only)", str(com[k]["points"]), com[k]["explanation"])
              for k in ("external", "rare_pair", "narrow")]
     rows += [(tim[k]["id"], "T timing (adds only)", str(tim[k]["points"]), tim[k]["explanation"])
-             for k in ("weekend", "investigation_window")]
+             for k in ("weekend",)]
     rows += [(tim["hour_rule"]["id"], "T timing", "not evaluated", tim["hour_rule"]["explanation"])]
     st.dataframe(pd.DataFrame(rows, columns=["rule", "signal", "points", "meaning"]),
                  hide_index=True, use_container_width=True)

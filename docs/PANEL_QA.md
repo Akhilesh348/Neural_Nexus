@@ -22,12 +22,13 @@
 
 **Why no LLM?** Optional per the brief; adds cost, latency, non-determinism and a prompt-injection surface (email bodies are untrusted text).
 
-**How is the score calculated?** `min(100, K + C + T)`, only when a language rule fired. K: each rule counts its strongest phrase — strong 40 (destroy records, off the books, avoid a written record), medium 25 (keep this quiet, between you and me, off the record), weak 15 (don't forward this, delete this email) — cap 60, plus 10 for a finance-risk topic (LJM, SEC, Andersen, mark-to-market…). C: +10 external recipient, +10 rare pair, +10 sent to 1–3 people (cap 30). T: +5 weekend, +10 sent during the investigation period 16 Oct 2001–31 Jan 2002 (cap 15). Low < 35 ≤ medium < 60 ≤ high.
+**How is the score calculated?** `min(100, K + C + T)`, only when a language rule fired. K: each rule counts its strongest phrase — strong 40 (destroy records, off the books, avoid a written record), medium 25 (keep this quiet, between you and me, off the record), weak 15 (don't forward this, delete this email) — cap 60, plus 10 for a finance-risk topic (LJM, SEC, Andersen, mark-to-market…). C: +10 external recipient, +10 rare pair, +10 sent to 1–3 people (cap 30). T: +5 weekend (cap 5). Low < 35 ≤ medium < 60 ≤ high.
+
+**Why only 114 of 254k emails?** Measured funnel: 1,008 emails contain any of our phrases at all; 704 of those are disclaimers, IT notices, negations or idioms; 190 are press articles or bulk senders → 114 flagged. Real misconduct language is rare, and the job is triage — "here are the conversations to read first". We tested more phrases on the corpus and added only those that were mostly genuine ("keep this confidential", "don't discuss this with anyone", "prefer not to put this in writing").
+
+**Why no date-window bonus?** We tried +10 for the investigation period (Oct 2001–Jan 2002) and removed it: it rewards *when* an email was sent rather than what it says, and would bias the ranking towards one period.
 
 **Why phrase strengths?** In v1.1 every phrase was worth 30, so 72 of 110 flags tied and "please don't forward this" ranked equal to "take this risk off the books". Strengths reflect how specific the request is; they gave 11 distinct score levels instead of 5.
-
-**Why the investigation-period bonus?** After the Q3 loss disclosure (16 Oct 2001) the SEC opened an inquiry; asking to destroy records or keep things quiet in that window matters more for a compliance reviewer. It only adds to an email that already has suspicious language.
-
 **Why no off-hours rule?** We measured: 28% of emails fall in 22:00–05:59 by header time, and header times run ~3 h from the in-body local timestamps. The rule would be noise, so it is shown as "not evaluated".
 
 **How did you deduplicate?** Message-ID is unique per file in this corpus, so we hash sender + Date + subject + body. 517,401 files → ~254k unique emails; every original path is kept in `source_occurrences`.

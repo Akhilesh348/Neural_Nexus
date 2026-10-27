@@ -25,6 +25,10 @@ def s(rules, body, sender="a@enron.com", recips=INTERNAL_MANY, weekday=2, subjec
     ("Keep this between us for now.", "K-SECRECY", 25),
     ("Between you and me, the number is lower.", "K-SECRECY", 25),
     ("Please don't forward this to anyone.", "K-SECRECY", 15),
+    ("(Please keep this confidential) He called me in to tell me.", "K-SECRECY", 25),
+    ("Do not discuss this with anyone at CES please.", "K-SECRECY", 25),
+    ("I'd prefer not to put this in writing yet.", "K-NO-RECORD", 40),
+    ("I would rather discuss this in person.", "K-NO-RECORD", 15),
 ])
 def test_phrase_strengths(rules, body, rule, points):
     r = s(rules, body)
@@ -62,9 +66,18 @@ def test_priority_bands(rules):
     "If there is one shred of evidence that he raised a red flag, show me.",
     "Can we arrange a call between you and me and Remy to discuss?",
     "Verify that your calendar was imported correctly, and then delete this message.",
+    "This press report is not for distribution within or without an organization.",
+    "Document shredding has been reported at the auditor.",                  # topic only
 ])
 def test_no_flag(rules, body):
     assert not s(rules, body).flagged
+
+
+def test_spam_offer_is_suppressed(rules):
+    body = ("As an Elite Member, we have hand picked this special offer just for you. "
+            "(Please don't share it with anyone else).")
+    r = s(rules, body, sender="betatest@offers.example")
+    assert not r.flagged and r.suppressed
 
 
 def test_bulk_sender_suppressed(rules):
@@ -85,20 +98,21 @@ def test_all_amplifiers_and_caps(rules):
           pairs={("a@enron.com", "x@hotmail.com"): 1}, counts={"a@enron.com": 500})
     ids = {x.rule_id for x in r.reasons}
     assert {"K-DESTROY", "K-SECRECY", "K-NO-RECORD", "K-TOPIC", "C-EXTERNAL", "C-RARE-PAIR",
-            "C-NARROW", "T-WEEKEND", "T-INVESTIGATION"} <= ids
-    assert r.k == 60 and r.c == 30 and r.t == 15
-    assert r.score == 100 and r.priority == "high"
+            "C-NARROW", "T-WEEKEND"} <= ids
+    assert r.k == 60 and r.c == 30 and r.t == 5
+    assert r.score == 95 and r.priority == "high"
 
 
-def test_investigation_window_bounds(rules):
-    assert "T-INVESTIGATION" in {x.rule_id for x in s(rules, "Shred the files.", date="2001-10-16").reasons}
-    assert "T-INVESTIGATION" not in {x.rule_id for x in s(rules, "Shred the files.", date="2001-10-15").reasons}
+def test_no_date_window_bonus(rules):
+    a = s(rules, "Shred the files.", date="2001-11-05")
+    b = s(rules, "Shred the files.", date="2000-11-06")
+    assert a.score == b.score
 
 
 def test_missing_data_is_not_evaluated_not_zero(rules):
     r = s(rules, "Shred the documents.", weekday=None, date=None, pairs={}, counts={"a@enron.com": 3})
     ne = {x.rule_id for x in r.not_evaluated}
-    assert {"T-OFF-HOURS", "T-WEEKEND", "T-INVESTIGATION", "C-RARE-PAIR"} <= ne
+    assert {"T-OFF-HOURS", "T-WEEKEND", "C-RARE-PAIR"} <= ne
 
 
 def test_subdomain_is_internal(rules):
