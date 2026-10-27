@@ -6,8 +6,8 @@
 
 | S. No. | Name |
 |---:|---|
-| 1 | Akhilesh |
-| 2 | Kovid |
-| 3 | Praveen |
-| 4 | Chintamani |
+| 1 | Vadithe Venkat Akhilesh Naik|
+| 2 | Kovid Parmar|
+| 3 | Praveen Kumar|
+| 4 | Chinthala Shivamani |
 
