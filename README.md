@@ -17,10 +17,10 @@ Turns the raw Enron mailbox dump into a navigable dataset and a ranked, explaina
 
 ### Contributions (three sentences each — to be completed by each member)
 
-- **Vadithe Venkat Akhilesh Naik:** _TODO by member._
-- **Kovid Parmar:** _TODO by member._
-- **Praveen Kumar:** _TODO by member._
-- **Chinthala Shivamani:** _TODO by member._
+- **Vadithe Venkat Akhilesh Naik:**Dashboard, Integration & Validation (Streamlit)
+- **Kovid Parmar:**Communication Graph Analysis
+- **Praveen Kumar:**Email Processing & Database
+- **Chinthala Shivamani:**Suspicious Email Detection
 
 ## Run steps (Windows / PowerShell, Python 3.9)
 
