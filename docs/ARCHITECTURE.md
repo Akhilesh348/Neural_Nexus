@@ -48,20 +48,23 @@ src/evaluate.py   annotation sheet (top 20 + 20 seeded random) → human labels 
 
 ## Scoring (`src/scoring.py`, `config/rules.json`)
 
-`score = min(100, K + C + T)` — computed **only when a strong language rule fires** (K required).
+`score = min(100, K + C + T)` — computed **only when a language rule fires** (K required). Rules v1.2.0.
 
 | Signal | Rules | Points |
 |---|---|---|
-| K language (0–60) | K-DESTROY, K-SECRECY, K-NO-RECORD (30 each); K-TOPIC (+10, context only) | flags the email |
-| C communication (0–30) | C-EXTERNAL (+15), C-RARE-PAIR (+15) | adds only if flagged |
-| T timing (0–10) | T-WEEKEND (+10); T-OFF-HOURS **not evaluated** (header hours unreliable) | adds only if flagged |
+| K language (0–60) — flags the email | K-DESTROY (strong 40: shred/destroy/purge/get rid of records · weak 15: "delete this email"), K-OFF-BOOKS (strong 40), K-NO-RECORD (strong 40), K-SECRECY (medium 25: "keep this quiet", "between you and me", "off the record" · weak 15: "don't forward this", "eyes only"). Each rule counts its strongest phrase. | 15 / 25 / 40 per rule, cap 60 |
+| K-TOPIC — adds only | finance-risk/investigation terms: LJM, Raptor, Chewco, JEDI, SPE, mark-to-market, prepay, Andersen, SEC, subpoena, restatement, off-balance-sheet | +10 |
+| C communication (0–30) — adds only | C-EXTERNAL (+10), C-RARE-PAIR (+10), C-NARROW 1–3 recipients (+10) | cap 30 |
+| T timing (0–15) — adds only | T-WEEKEND (+5), T-INVESTIGATION 16 Oct 2001–31 Jan 2002 (+10); T-OFF-HOURS **not evaluated** | cap 15 |
 
-Rules read the subject + authored text only. A match is discarded if a disclaimer/IT/survey
-term appears within 250 characters, and K-DESTROY is discarded when negated ("don't delete").
-If the text looks like a press article or newsletter (N-NEWS: ≥ 2 outlet/copyright markers, or one
-marker in a long text) the email is not flagged and the hit is recorded as "not evaluated".
-After editing `config/rules.json`: `python -m src.pipeline --rescore-only` (~1 min, no re-ingest).
-Priority: medium ≥ 30, high ≥ 60. Missing data is recorded as "not evaluated", never as zero risk.
+Priority: low < 35 ≤ medium < 60 ≤ high (a lone weak phrase is honestly "low").
+
+Rules read the subject + authored text only. A match is discarded if a disclaimer/IT/survey/idiom
+term appears within 250 characters ("intended recipient", "workspace", "shred of", "rolled off the books" …),
+and K-DESTROY is discarded when negated ("don't delete"). Two suppressions record the hit as
+"not evaluated" instead of flagging: N-NEWS (press article/newsletter/ad markers) and N-BULK
+(mailing-list or automated sender). After editing `config/rules.json`:
+`python -m src.pipeline --rescore-only` (~2 min, no re-ingest). Missing data is "not evaluated", never zero risk.
 
 ## Key design decisions
 

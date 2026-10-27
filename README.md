@@ -73,12 +73,14 @@ tests/            parser, scoring, evaluation, end-to-end pipeline smoke test
 - Context-only scoring (external/rare/time): flagged 12.5% of all emails with no suspicious language → language now required.
 - First rule set on a 20k sample: disclaimers, news usage of "shred", negations → filters added (24 → 8 sample flags).
 - Rules v1.0.0 on the full corpus ranked press digests and a survey invitation at the top → v1.1.0 press/newsletter suppression and survey/negation fixes (360 → 110 flags; 185 suppressed, shown as "not evaluated").
+- Rules v1.1.0 gave every phrase 30 points → only 5 distinct scores, spam and IT notices still flagged → v1.2.0 phrase strengths (strong 40 / medium 25 / weak 15), narrow-audience and investigation-period amplifiers, bulk-sender suppression. A v1.2 draft treating "off-balance-sheet" as a strong phrase flooded the top with routine finance memos; it was moved to context-only.
 
-## Current results (full corpus, rules v1.1.0)
+## Current results (full corpus, rules v1.2.0)
 
 517,401 files · 0 parse failures · 254,361 unique emails (263,040 duplicate copies) · 253,879 dated 1998–2002 ·
-**110 flagged for review** (3 high, 107 medium) · 185 language hits suppressed as press/newsletter text ·
-360,243 sender→recipient pairs · pipeline 425 s, rescore 63 s. **Precision: pending manual review.**
+**87 flagged for review** (11 high, 52 medium, 24 low; 11 distinct score levels) · 189 language hits set aside as
+press/newsletter/bulk-sender text ("not evaluated") · 360,243 sender→recipient pairs · 64 people with flagged emails ·
+pipeline 425 s, rescore ~2 min. **Precision: pending manual review.**
 
 ## Limitations
 

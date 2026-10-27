@@ -90,7 +90,7 @@ def render_evidence(email_id):
         m1, m2, m3, _ = st.columns([1, 1, 1, 2])
         m1.metric("K language", f"{r.k_points:.0f} / 60")
         m2.metric("C communication", f"{r.c_points:.0f} / 30")
-        m3.metric("T timing", f"{r.t_points:.0f} / 10")
+        m3.metric("T timing", f"{r.t_points:.0f} / 15")
         st.markdown("**Why it was flagged**")
         for reason in json.loads(r.reasons_json):
             line = f"- **{reason['rule_id']}** (+{reason['points']:.0f}) — {html.escape(reason['explanation'])}"
@@ -170,9 +170,12 @@ with tab_flag:
     st.subheader("Which emails should a reviewer read first, and why?")
     rules_cfg = load_rules()
     rule_ids = [r["id"] for r in rules_cfg["language"]["strong_rules"]] + \
-               [rules_cfg["language"]["topic_rule"]["id"], "C-EXTERNAL", "C-RARE-PAIR", "T-WEEKEND"]
+               [rules_cfg["language"]["topic_rule"]["id"], "C-EXTERNAL", "C-RARE-PAIR", "C-NARROW",
+                "T-WEEKEND", "T-INVESTIGATION"]
+    f0, _ = st.columns([1, 3])
+    pick_priority = f0.multiselect("Priority", ["high", "medium", "low"], default=["high", "medium", "low"])
     f1, f2, f3, f4 = st.columns([1, 1.3, 1.3, 1.4])
-    min_score = f1.slider("Minimum score", 0, 100, 30, 5)
+    min_score = f1.slider("Minimum score", 0, 100, 0, 5)
     pick_rules = f2.multiselect("Must include rule", rule_ids)
     sender_q = f3.text_input("Sender contains")
     text_q = f4.text_input("Subject / text contains")
@@ -180,7 +183,7 @@ with tab_flag:
     flagged = q("""SELECT r.email_id, r.score, r.priority, r.rules, e.sent_at_utc, e.sender, e.subject
                    FROM risk_results r JOIN emails e USING(email_id)
                    ORDER BY r.score DESC, LENGTH(r.rules) DESC, e.sent_at_utc DESC""")
-    view = flagged[flagged.score >= min_score]
+    view = flagged[(flagged.score >= min_score) & flagged.priority.isin(pick_priority)]
     for rid in pick_rules:
         view = view[view.rules.str.split(",").apply(lambda xs, rid=rid: rid in xs)]
     if sender_q:
@@ -289,21 +292,27 @@ with tab_method:
     cfg = load_rules()
     st.subheader("How are emails flagged?")
     st.markdown(
-        "An email is **flagged for review only if a strong language rule fires** on the sender's own words "
-        "(quoted replies, forwarded text and legal disclaimers are removed first). Communication and timing "
-        "signals only **add** points to an already-flagged email — being unusual alone never flags anyone.\n\n"
-        "`score = min(100, K + C + T)` · K language 0–60 · C communication 0–30 · T timing 0–10 · "
-        f"medium ≥ {cfg['priority_bands']['medium']}, high ≥ {cfg['priority_bands']['high']} · "
+        "An email is **flagged for review only if a language rule fires** on the sender's own words "
+        "(quoted replies, forwarded text and legal disclaimers are removed first; press articles and bulk "
+        "senders are set aside as 'not evaluated'). Each phrase has a strength — **strong 40, medium 25, "
+        "weak 15** — and each rule counts its strongest phrase. Topic, communication and timing signals only "
+        "**add** points to an already-flagged email — being unusual alone never flags anyone.\n\n"
+        "`score = min(100, K + C + T)` · K language 0–60 · C communication 0–30 · T timing 0–15 · "
+        f"low < {cfg['priority_bands']['medium']} ≤ medium < {cfg['priority_bands']['high']} ≤ high · "
         f"rules v{cfg['rule_version']}")
-    rows = [(r["id"], "K language", cfg["language"]["points_per_strong_rule"], r["explanation"])
-            for r in cfg["language"]["strong_rules"]]
+    rows = []
+    for r in cfg["language"]["strong_rules"]:
+        pts = sorted({p["points"] for p in r["patterns"]}, reverse=True)
+        strengths = "/".join(dict.fromkeys(p["strength"] for p in sorted(r["patterns"], key=lambda p: -p["points"])))
+        rows.append((r["id"], f"K language ({strengths})", " / ".join(map(str, pts)), r["explanation"]))
     t = cfg["language"]["topic_rule"]
     com, tim = cfg["communication"], cfg["timing"]
-    rows += [(t["id"], "K language (context only)", t["points"], t["explanation"]),
-             (com["external"]["id"], "C communication", com["external"]["points"], com["external"]["explanation"]),
-             (com["rare_pair"]["id"], "C communication", com["rare_pair"]["points"], com["rare_pair"]["explanation"]),
-             (tim["weekend"]["id"], "T timing", tim["weekend"]["points"], tim["weekend"]["explanation"]),
-             (tim["hour_rule"]["id"], "T timing", 0, tim["hour_rule"]["explanation"])]
+    rows += [(t["id"], "K topic (adds only)", str(t["points"]), t["explanation"])]
+    rows += [(com[k]["id"], "C communication (adds only)", str(com[k]["points"]), com[k]["explanation"])
+             for k in ("external", "rare_pair", "narrow")]
+    rows += [(tim[k]["id"], "T timing (adds only)", str(tim[k]["points"]), tim[k]["explanation"])
+             for k in ("weekend", "investigation_window")]
+    rows += [(tim["hour_rule"]["id"], "T timing", "not evaluated", tim["hour_rule"]["explanation"])]
     st.dataframe(pd.DataFrame(rows, columns=["rule", "signal", "points", "meaning"]),
                  hide_index=True, use_container_width=True)
     st.caption("Full patterns and exclusions: config/rules.json")

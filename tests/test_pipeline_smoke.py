@@ -57,7 +57,8 @@ def test_pipeline_end_to_end(tmp_path):
     assert len(ev["sources"]) == 2 and ev["email"]["n_copies"] == 2
     assert {r["recipient"] for r in ev["recipients"]} == {"b@enron.com", "x@hotmail.com"}
     assert "C-EXTERNAL" in ev["risk"]["rules"] and "T-WEEKEND" in ev["risk"]["rules"]
-    assert score == 30 + 15 + 10
+    # K-DESTROY strong 40 + C-EXTERNAL 10 + C-NARROW 10 (2 recipients) + T-WEEKEND 5
+    assert score == 40 + 10 + 10 + 5
     # graph counts the duplicate once
     assert con.execute("SELECT n_emails FROM edges WHERE sender='a@enron.com' AND recipient='b@enron.com'"
                        ).fetchone()[0] == 1

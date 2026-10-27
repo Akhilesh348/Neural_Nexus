@@ -1,9 +1,8 @@
 {
-  "rule_version": "1.1.0",
-  "notes": "Weights are engineering choices, not evidence-backed laws. An email is flagged for review only if at least one strong language rule fires on the sender's own (authored) text or subject. Communication and timing signals only add points to already-flagged emails.",
+  "rule_version": "1.2.0",
+  "notes": "Weights are engineering choices, not evidence-backed laws. An email is flagged for review only if at least one language rule fires on the sender's own (authored) text or subject. Each phrase has a strength (strong 40 / medium 25 / weak 15); each rule contributes its strongest hit. Communication, topic and timing signals only add points to already-flagged emails.",
 
   "language": {
-    "points_per_strong_rule": 30,
     "cap": 60,
     "context_window_chars": 250,
     "context_exclusions": [
@@ -13,20 +12,31 @@
       "deleted items", "unsubscribe", "mailbox (?:size|limit|quota|is full)", "disk space",
       "storage limit", "(?:outlook|notes) migration", "remove you from",
       "virus", "feel free to delete", "no longer (?:of interest|wish)",
-      "respondent", "survey", "this link"
+      "respondent", "survey", "this link",
+      "workspace", "imported correctly", "windows directory", "format c", "response list",
+      "not interested", "file attachment", "grant access",
+      "\\bshred of\\b", "between you and me and", "roll(?:s|ed|ing)? off the books"
     ],
     "news_suppression": {
       "id": "N-NEWS",
-      "explanation": "Not evaluated: text looks like a press article or newsletter, not the sender's own words",
+      "explanation": "Not evaluated: text looks like a press article, newsletter or advertisement, not the sender's own words",
       "markers": [
         "all rights reserved", "\\(c\\) ?(?:copyright|\\d{4})", "copyright \\d{4}", "\\u00a9",
         "dow jones", "reuters", "associated press", "new york times", "wall street journal",
         "washington post", "los angeles times", "houston chronicle", "financial times", "bloomberg",
         "business wire", "pr newswire", "todaysheadlines", "unsubscribe", "newsletter", "click here",
-        "cnn\\b", "\\bAP\\b -", "staff writer"
+        "cnn\\b", "staff writer", "galleries", "<a href", "class=\"", "width=\""
       ],
       "min_markers": 2,
       "single_marker_min_chars": 1500
+    },
+    "bulk_sender_suppression": {
+      "id": "N-BULK",
+      "explanation": "Not evaluated: sender looks like a mailing list, announcement or automated account",
+      "sender_patterns": [
+        "\\blists?\\.", "newsletter", "announce", "mailer", "wizard", "no-?reply", "\\bdeals?@",
+        "promo", "marketing@", "^securepack@", "^microsoft\\."
+      ]
     },
     "negation_window_chars": 25,
     "negation_pattern": "\\b(?:not|don'?t|never|shouldn'?t|won'?t|can'?t|no need to)\\b",
@@ -36,44 +46,56 @@
         "explanation": "Asks for records, files or emails to be destroyed or deleted",
         "check_negation": true,
         "patterns": [
-          "\\bshred(?:s|ded|ding)? (?:[\\w-]+ ){0,3}?(?:documents?|files?|records?|papers?|e-?mails?|evidence|copies|everything)\\b",
-          "\\bdestroy(?:ed|ing)? (?:[\\w-]+ ){0,3}?(?:documents?|files?|records?|e-?mails?|papers?|copies|notes|evidence)\\b",
-          "\\bdelete (?:this|these|the|that|those|all|any|my|your) (?:e-?mails?|messages?|files?|documents?|notes?|records?)\\b",
-          "\\bget rid of (?:the|these|those|any|all|your) (?:documents?|files?|records?|e-?mails?|papers?)\\b",
-          "\\bpurge (?:the|these|those|all|your) (?:documents?|files?|records?|e-?mails?)\\b"
+          {"strength": "strong", "points": 40, "pattern": "\\bshred(?:s|ded|ding)? (?:[\\w-]+ ){0,3}?(?:documents?|files?|records?|papers?|e-?mails?|evidence|copies|everything)\\b"},
+          {"strength": "strong", "points": 40, "pattern": "\\bdestroy(?:ed|ing)? (?:[\\w-]+ ){0,3}?(?:documents?|files?|records?|e-?mails?|papers?|copies|notes|evidence)\\b"},
+          {"strength": "strong", "points": 40, "pattern": "\\bget rid of (?:the|these|those|any|all|your) (?:documents?|files?|records?|e-?mails?|papers?)\\b"},
+          {"strength": "strong", "points": 40, "pattern": "\\bpurge (?:the|these|those|all|your) (?:documents?|files?|records?|e-?mails?)\\b"},
+          {"strength": "weak", "points": 15, "pattern": "\\bdelete (?:this|these|the|that|those|all|any|my|your) (?:e-?mails?|messages?|files?|documents?|notes?|records?)\\b"}
         ]
       },
       {
-        "id": "K-SECRECY",
-        "explanation": "Asks the recipient to keep the content secret or not to pass it on",
+        "id": "K-OFF-BOOKS",
+        "explanation": "Talks about keeping something off the books (possible accounting concealment)",
         "patterns": [
-          "\\bkeep (?:this|it|that) (?:quiet|under wraps|to yourself|between (?:us|you and me|ourselves))\\b",
-          "\\bbetween you and me\\b",
-          "\\b(?:do not|don'?t|please don'?t) (?:forward|share|repeat|distribute|mention) (?:this|it)\\b",
-          "\\b(?:do not|don'?t) tell anyone\\b",
-          "\\boff the record\\b",
-          "\\boff the books\\b",
-          "\\beyes only\\b"
+          {"strength": "strong", "points": 40, "pattern": "\\boff the books\\b"}
         ]
       },
       {
         "id": "K-NO-RECORD",
         "explanation": "Suggests avoiding a written record of the discussion",
         "patterns": [
-          "\\b(?:do not|don'?t|never) put (?:this|it|that|anything) in writing\\b",
-          "\\bkeep (?:this|it) off (?:e-?mail|paper)\\b",
-          "\\b(?:do not|don'?t) (?:e-?mail|write) (?:this|me about this)\\b",
-          "\\bno paper trail\\b",
-          "\\bavoid (?:creating )?(?:a )?(?:paper trail|written record|record of)\\b",
-          "\\b(?:call me|discuss (?:this )?(?:by|over the) phone) rather than (?:e-?mail|writing)\\b"
+          {"strength": "strong", "points": 40, "pattern": "\\b(?:do not|don'?t|never) put (?:this|it|that|anything) in writing\\b"},
+          {"strength": "strong", "points": 40, "pattern": "\\bkeep (?:this|it) off (?:e-?mail|paper)\\b"},
+          {"strength": "strong", "points": 40, "pattern": "\\b(?:do not|don'?t) (?:e-?mail|write) (?:this|me about this)\\b"},
+          {"strength": "strong", "points": 40, "pattern": "\\bno paper trail\\b"},
+          {"strength": "strong", "points": 40, "pattern": "\\bavoid (?:creating )?(?:a )?(?:paper trail|written record|record of)\\b"},
+          {"strength": "strong", "points": 40, "pattern": "\\b(?:call me|discuss (?:this )?(?:by|over the) phone) rather than (?:e-?mail|writing)\\b"}
+        ]
+      },
+      {
+        "id": "K-SECRECY",
+        "explanation": "Asks the recipient to keep the content secret or not to pass it on",
+        "patterns": [
+          {"strength": "medium", "points": 25, "pattern": "\\bkeep (?:this|it|that) (?:quiet|under wraps|to yourself|between (?:us|you and me|ourselves))\\b"},
+          {"strength": "medium", "points": 25, "pattern": "\\bbetween you and me\\b"},
+          {"strength": "medium", "points": 25, "pattern": "\\b(?:do not|don'?t) tell anyone\\b"},
+          {"strength": "medium", "points": 25, "pattern": "\\b(?:do not|don'?t|please don'?t) mention (?:this|it)\\b"},
+          {"strength": "medium", "points": 25, "pattern": "\\boff the record\\b"},
+          {"strength": "weak", "points": 15, "pattern": "\\b(?:do not|don'?t|please don'?t) (?:forward|share|repeat|distribute) (?:this|it)\\b"},
+          {"strength": "weak", "points": 15, "pattern": "\\beyes only\\b"}
         ]
       }
     ],
     "topic_rule": {
       "id": "K-TOPIC",
-      "explanation": "Mentions a special-purpose entity named in the public Powers Report (context only)",
+      "explanation": "Mentions a finance-risk or investigation topic (Powers Report entities, SPEs, mark-to-market, auditors, regulators) — context only",
       "points": 10,
-      "patterns": ["\\bLJM\\d?\\b", "\\bRaptors?\\b", "\\bChewco\\b", "\\bJEDI\\b", "\\bWhitewing\\b"]
+      "patterns": [
+        "\\bLJM\\d?\\b", "\\bRaptors?\\b", "\\bChewco\\b", "\\bJEDI\\b", "\\bWhitewing\\b", "\\bCondor\\b",
+        "\\bspecial purpose (?:entit(?:y|ies)|vehicles?)\\b", "(?-i:\\bSPEs?\\b)", "\\bmark[- ]to[- ]market\\b",
+        "\\bprepays?\\b", "\\bAndersen\\b", "(?-i:\\bSEC\\b)", "\\bsubpoena\\w*", "\\brestat(?:e|ed|ement)\\b",
+        "\\bwrite[- ]?downs?\\b", "\\boff[- ]balance[- ]sheet\\b"
+      ]
     }
   },
 
@@ -82,23 +104,37 @@
     "internal_domains": ["enron.com"],
     "external": {
       "id": "C-EXTERNAL",
-      "points": 15,
+      "points": 10,
       "explanation": "Sent from Enron to at least one address outside the internal domain list"
     },
     "rare_pair": {
       "id": "C-RARE-PAIR",
-      "points": 15,
+      "points": 10,
       "max_pair_emails": 2,
       "min_sender_emails": 20,
       "explanation": "Sender (20+ emails) rarely writes to this recipient (at most 2 emails in the corpus)"
+    },
+    "narrow": {
+      "id": "C-NARROW",
+      "points": 10,
+      "max_recipients": 3,
+      "explanation": "Request went to a small audience (1-3 recipients), i.e. a private message rather than a broadcast"
     }
   },
 
   "timing": {
+    "cap": 15,
     "weekend": {
       "id": "T-WEEKEND",
-      "points": 10,
+      "points": 5,
       "explanation": "Sent on a Saturday or Sunday (by header date, US/Pacific)"
+    },
+    "investigation_window": {
+      "id": "T-INVESTIGATION",
+      "points": 10,
+      "start": "2001-10-16",
+      "end": "2002-01-31",
+      "explanation": "Sent between the Q3 2001 loss disclosure (16 Oct 2001) and 31 Jan 2002, when regulators were investigating and record retention mattered"
     },
     "hour_rule": {
       "id": "T-OFF-HOURS",
@@ -107,6 +143,6 @@
     }
   },
 
-  "priority_bands": {"high": 60, "medium": 30},
+  "priority_bands": {"high": 60, "medium": 35},
   "people": {"min_sent_emails": 10}
 }

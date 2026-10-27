@@ -102,7 +102,7 @@ def ingest(con, path, limit=None):
 def score_all(con, rules):
     t0 = time.time()
     emails = pd.read_sql_query(
-        "SELECT email_id, sender, subject, body_authored, weekday FROM emails WHERE date_valid = 1", con)
+        "SELECT email_id, sender, subject, body_authored, weekday, sent_at_utc FROM emails WHERE date_valid = 1", con)
     rec = pd.read_sql_query(
         "SELECT r.email_id, r.recipient FROM recipients r JOIN emails e USING(email_id) "
         "WHERE e.date_valid = 1", con)
@@ -116,7 +116,7 @@ def score_all(con, rules):
     for e in emails.itertuples(index=False):
         wd = None if pd.isna(e.weekday) else int(e.weekday)
         res = score_email(e.subject, e.body_authored, e.sender, recips_by_email.get(e.email_id, []),
-                          wd, rules, pair_counts, sender_counts)
+                          wd, rules, pair_counts, sender_counts, e.sent_at_utc)
         suppressed += res.suppressed
         if res.flagged:
             rows.append((e.email_id, res.score, res.priority, res.k, res.c, res.t,
@@ -126,7 +126,7 @@ def score_all(con, rules):
     con.executemany("INSERT INTO risk_results VALUES (?,?,?,?,?,?,?,?,?,?)", rows)
     con.commit()
     print(f"score: {len(emails)} valid emails scored, {len(rows)} flagged for review, "
-          f"{suppressed} language hits suppressed as press/newsletter  {time.time() - t0:.0f}s")
+          f"{suppressed} language hits suppressed as press/newsletter/bulk sender  {time.time() - t0:.0f}s")
     return {"scored_emails": len(emails), "flagged_emails": len(rows), "suppressed_news": suppressed}
 
 

@@ -22,7 +22,11 @@
 
 **Why no LLM?** Optional per the brief; adds cost, latency, non-determinism and a prompt-injection surface (email bodies are untrusted text).
 
-**How is the score calculated?** `min(100, K + C + T)`. K: 30 per strong language rule (cap 60) + 10 for a Powers-Report entity. C: +15 external recipient, +15 rare sender–recipient pair. T: +10 weekend. C and T count only if K fired.
+**How is the score calculated?** `min(100, K + C + T)`, only when a language rule fired. K: each rule counts its strongest phrase — strong 40 (destroy records, off the books, avoid a written record), medium 25 (keep this quiet, between you and me, off the record), weak 15 (don't forward this, delete this email) — cap 60, plus 10 for a finance-risk topic (LJM, SEC, Andersen, mark-to-market…). C: +10 external recipient, +10 rare pair, +10 sent to 1–3 people (cap 30). T: +5 weekend, +10 sent during the investigation period 16 Oct 2001–31 Jan 2002 (cap 15). Low < 35 ≤ medium < 60 ≤ high.
+
+**Why phrase strengths?** In v1.1 every phrase was worth 30, so 72 of 110 flags tied and "please don't forward this" ranked equal to "take this risk off the books". Strengths reflect how specific the request is; they gave 11 distinct score levels instead of 5.
+
+**Why the investigation-period bonus?** After the Q3 loss disclosure (16 Oct 2001) the SEC opened an inquiry; asking to destroy records or keep things quiet in that window matters more for a compliance reviewer. It only adds to an email that already has suspicious language.
 
 **Why no off-hours rule?** We measured: 28% of emails fall in 22:00–05:59 by header time, and header times run ~3 h from the in-body local timestamps. The rule would be noise, so it is shown as "not evaluated".
 
