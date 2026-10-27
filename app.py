@@ -14,6 +14,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from src.analyze import analyze_raw, build_raw
+from src.scoring import Rules
+
 DB_PATH = os.environ.get("ENRON_DB", "outputs/enron.db")
 RULES_PATH = "config/rules.json"
 METRICS_PATH = "outputs/metrics.json"
@@ -128,8 +131,8 @@ M = meta()
 if M.get("limit", "none") != "none":
     st.warning(f"Subset run: only the first {M['limit']} source files were processed.")
 
-tab_over, tab_flag, tab_net, tab_method = st.tabs(
-    ["📊 Overview", "🚩 Flagged emails", "🕸️ Network & people", "📐 Method & precision"])
+tab_over, tab_flag, tab_net, tab_check, tab_method = st.tabs(
+    ["📊 Overview", "🚩 Flagged emails", "🕸️ Network & people", "🔍 Check a new email", "📐 Method & precision"])
 
 # ----- Overview (R1) -----
 with tab_over:
@@ -286,6 +289,81 @@ with tab_net:
                             on_select="rerun", selection_mode="single-row", key="person_emails")
         erow = esel.selection.rows if esel and esel.selection else []
         render_evidence(pf.email_id.iat[erow[0]] if erow else pf.email_id.iat[0])
+
+# ----- Check a new email (same parser + rules as the pipeline) -----
+EXAMPLE = {
+    "sender": "jane.doe@enron.com",
+    "to": "john.smith@hotmail.com",
+    "subject": "Raptor numbers",
+    "date": "Sat, 10 Nov 2001 23:15:00 -0800",
+    "body": "John,\n\nPlease keep this between us. Once the audit is done, shred the old Raptor files.\n\nJane",
+}
+
+
+@st.cache_resource
+def load_rules_obj():
+    return Rules.load(RULES_PATH)
+
+
+with tab_check:
+    st.subheader("Is a new email flagged for review, and why?")
+    st.caption("The email goes through exactly the same steps as the corpus: parsing, removal of quoted text and "
+               "disclaimers, the rules in config/rules.json, and corpus statistics for the sender "
+               "(volume, usual recipients, usual hours). It is not stored.")
+    mode = st.radio("Input", ["Fill in fields", "Paste a raw email (headers + body)"], horizontal=True)
+    if st.button("Load an example"):
+        for k, v in EXAMPLE.items():
+            st.session_state[f"new_{k}"] = v
+    if mode == "Fill in fields":
+        c1, c2 = st.columns(2)
+        sender = c1.text_input("From", key="new_sender", placeholder="name@enron.com")
+        to = c2.text_input("To (comma-separated)", key="new_to")
+        subject = c1.text_input("Subject", key="new_subject")
+        date = c2.text_input("Date (optional, e.g. Mon, 5 Nov 2001 14:30:00 -0800)", key="new_date")
+        body = st.text_area("Body", key="new_body", height=180)
+        raw = build_raw(sender, to, subject, body, date=date) if (sender or body) else ""
+    else:
+        raw = st.text_area("Raw email", height=260, key="new_raw",
+                           placeholder="From: ...\nTo: ...\nSubject: ...\nDate: ...\n\nBody text")
+    if st.button("Analyse email", type="primary"):
+        if not raw.strip():
+            st.warning("Enter an email first.")
+        else:
+            rec, res = analyze_raw(raw, get_con(), load_rules_obj())
+            if res.flagged:
+                st.error(f"🚩 **Flagged for review** — score **{res.score:.0f}/100** ({res.priority} priority)")
+                m1, m2, m3, _ = st.columns([1, 1, 1, 2])
+                m1.metric("K language", f"{res.k:.0f} / 60")
+                m2.metric("C communication", f"{res.c:.0f} / 30")
+                m3.metric("T timing", f"{res.t:.0f} / 10")
+                st.markdown("**Why it was flagged**")
+                for reason in res.reasons:
+                    line = f"- **{reason.rule_id}** (+{reason.points:.0f}) — {html.escape(reason.explanation)}"
+                    if reason.supporting_value and not reason.evidence_excerpt:
+                        line += f" · `{html.escape(reason.supporting_value)}`"
+                    st.markdown(line, unsafe_allow_html=True)
+                    if reason.evidence_excerpt:
+                        st.markdown(f"<blockquote>{highlight(reason.evidence_excerpt, reason.supporting_value)}"
+                                    "</blockquote>", unsafe_allow_html=True)
+            elif res.suppressed:
+                st.warning("**Not flagged** — a suspicious phrase was found, but the text looks like a press "
+                           "article, newsletter or bulk sender, so it is recorded as 'not evaluated'.")
+            else:
+                st.success("**Not flagged** — no language rule fired on the sender's own words. "
+                           "Context (recipients, timing) alone never flags an email.")
+            if res.not_evaluated:
+                st.markdown("**Not evaluated** (missing data — not counted as zero risk)")
+                for reason in res.not_evaluated:
+                    st.markdown(f"- {reason.rule_id}: {html.escape(reason.explanation)}")
+            with st.expander("What the parser extracted"):
+                st.markdown(f"**Sender:** `{rec['sender'] or '—'}` · **Recipients:** "
+                            + (", ".join(f"`{r}`" for r in rec["recipients"]) or "none")
+                            + f" · **Date (UTC):** {rec['date_utc'] or 'not given / invalid'}")
+                st.markdown("**Sender's own text (what the rules read):**")
+                st.text(rec["body_authored"] or "(empty)")
+                if rec["body_quoted"]:
+                    st.markdown("**Quoted / forwarded text (ignored by the rules):**")
+                    st.text(rec["body_quoted"])
 
 # ----- Method & precision -----
 with tab_method:

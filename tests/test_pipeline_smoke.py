@@ -4,6 +4,7 @@ import sqlite3
 import tarfile
 
 from src import db
+from src.analyze import analyze_raw, build_raw
 from src.pipeline import run
 from src.scoring import Rules
 
@@ -64,3 +65,14 @@ def test_pipeline_end_to_end(tmp_path):
                        ).fetchone()[0] == 1
     assert con.execute("SELECT n_flagged FROM people WHERE sender='a@enron.com'").fetchone()[0] == 1
     assert db.get_meta(con)["rule_version"] == Rules.load().version
+
+    # A new email is analysed with the same parser, rules and corpus statistics
+    rules = Rules.load()
+    new = build_raw("a@enron.com", "x@hotmail.com", "files", "Please keep this quiet and shred the files.",
+                    date="Sat, 12 May 2001 10:00:00 -0700")
+    rec, res = analyze_raw(new, con, rules)
+    assert rec["sender"] == "a@enron.com" and res.flagged
+    assert {"K-DESTROY", "K-SECRECY", "C-EXTERNAL", "C-NARROW", "T-WEEKEND"} <= {r.rule_id for r in res.reasons}
+    assert res.score == 60 + 10 + 10 + 5          # K capped at 60
+    clean = build_raw("b@enron.com", "a@enron.com", "lunch", "Lunch at noon?")
+    assert not analyze_raw(clean, con, rules)[1].flagged

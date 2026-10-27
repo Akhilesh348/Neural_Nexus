@@ -8,6 +8,8 @@
 4. **(15 s) Network & people** — "Who communicates most with whom? Thickness is email count. Selecting a person shows their flagged emails and evidence — centrality alone never flags anyone."
 5. **(15 s) Method** — "Rules and weights are in one config file with a version. Precision is measured by two team members on the top 20 plus 20 random flags; it is computed only from those human labels."
 
+**Live check of a new email (optional, 20 s):** open **🔍 Check a new email**, click *Load an example*, then *Analyse email* → flagged 85/100 with each reason and its sentence. Remove "shred the old Raptor files" and re-run to show the score drop; remove the secrecy sentence too and it is not flagged, because context alone never flags.
+
 ## Likely questions
 
 **Why this architecture?** Parsing 517k files takes minutes, so it runs once offline into SQLite; the app only queries precomputed tables and loads in seconds. Each stage (parse, score, graph, UI) is a separate module with its own tests.

@@ -35,6 +35,7 @@ python -m venv .venv
 
 - Quick dev run: `python -m src.pipeline --input enron_mail_20150507.tar.gz --limit 20000 --db outputs/sample.db`, then `$env:ENRON_DB="outputs/sample.db"` before `streamlit run app.py`.
 - A Kaggle-style CSV (`file,email` columns) also works: `--input emails.csv`.
+- **Score a new email** with the same parser and rules: app tab **🔍 Check a new email** (fill in fields or paste a raw email), or `python -m src.check_email docs/sample_new_email.eml` (add `--json` for machine-readable output). Corpus statistics for the sender come from the database; the new email is not stored.
 - Precision workflow: `python -m src.evaluate template` → two reviewers fill `review_label` (yes/no/ambiguous) in copies of `docs/ANNOTATION_TEMPLATE.csv` → `python -m src.evaluate score --labels <fileA> <fileB>` → shown in the app.
 - Note: the repo lives in a OneDrive folder; if SQLite reports "database is locked", pause OneDrive sync or set `--db`/`ENRON_DB` to a path outside OneDrive.
 
@@ -54,6 +55,8 @@ src/pipeline.py   tarball/CSV → SQLite (emails, recipients, source_occurrences
 src/scoring.py    explainable rules from config/rules.json → score, reasons, evidence, "not evaluated" notes
 src/db.py         schema, indexes, evidence query
 src/evaluate.py   annotation sheet + precision from human labels
+src/analyze.py    score one new email with the same parser, rules and corpus statistics
+src/check_email.py command-line checker for a new email
 app.py            Streamlit dashboard (reads SQLite only)
 tests/            parser, scoring, evaluation, end-to-end pipeline smoke test
 ```
